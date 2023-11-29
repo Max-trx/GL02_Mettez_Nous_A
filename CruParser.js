@@ -3,7 +3,7 @@
 var CruParser = function(sTokenize, sParsedSymb){
 	// The list of sessions parsed from the input file.
 	this.parsedSessions = [];
-	this.symb = ["UVUV","Seance","S=","+","UVUV","+","UVUV","Seance","S=","+","Page","generee","en"];
+	this.symb = ["+UVUV","Seance","Page generee en"];
 	this.showTokenize = sTokenize;
 	this.showParsedSymbols = sParsedSymb;
 	this.errorCount = 0;
@@ -14,7 +14,7 @@ var CruParser = function(sTokenize, sParsedSymb){
 // tokenize : transform the data input into a list
 // <eol> = CRLF
 CruParser.prototype.tokenize = function(data){
-	var separator = /(\r\n|: |\/{2}|\/\/)/;
+	var separator = /(\r\n|\/{2}|\/\/)/;
 	data = data.split(separator);
 	data = data.filter((val, idx) => !val.match(separator));
 	return data;
@@ -78,12 +78,10 @@ CruParser.prototype.expect = function(s, input){
 
 // Parser rules
 
-// <cru> = *(<session>) "Page" "generee" "en" *
+// <cru> = *(<session>) "Page generee en" *
 CruParser.prototype.cru = function(input){
 	this.session(input);
-	this.expect("Page", input);
-	this.expect("generee", input);
-	this.expect("en", input);
+	this.expect("Page generee en", input);
 	if(input.length > 0){
 		this.cru(input);
 	}
@@ -102,14 +100,14 @@ CruParser.prototype.session = function(input){
 CruParser.prototype.seance = function(input){
 	this.expect("Seance", input);
 	var salle = this.salle(input);
-	while(this.check("S=", input)){
-		this.next(input);
-		salle = this.salle(input);
-	}
 	var horaire = this.horaire(input);
 	while(this.check("H=", input)){
 		this.next(input);
 		horaire = this.horaire(input);
+	}
+	while(this.check("S=", input)){
+		this.next(input);
+		salle = this.salle(input);
 	}
 	this.parsedSessions.push({ salle: salle, horaire: horaire });
 }
@@ -118,7 +116,7 @@ CruParser.prototype.seance = function(input){
 CruParser.prototype.salle = function(input){
 	this.expect("S=", input);
 	var curS = this.next(input);
-	if(matched = curS.match(/\d+/)){
+	if(matched = curS.match(/[A-Z]|d{3}|SPORT|EXT1|IUT1/)){
 		return matched[0];
 	}else{
 		this.errMsg("Invalid salle", input);
@@ -129,7 +127,7 @@ CruParser.prototype.salle = function(input){
 CruParser.prototype.horaire = function(input){
 	this.expect("H=", input);
 	var curS = this.next(input);
-	if(matched = curS.match(/\d{1,2}:\d{2}-\d{1,2}:\d{2}/)){
+	if(matched = curS.match(/(L|MA|ME|J|V) \d{1,2}:\d{2}-\d{1,2}:\d{2}/)){
 		return matched[0];
 	}else{
 		this.errMsg("Invalid horaire", input);
