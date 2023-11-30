@@ -3,7 +3,7 @@
 var CruParser = function(sTokenize, sParsedSymb){
 	// The list of sessions parsed from the input file.
 	this.parsedSessions = [];
-	this.symb = ["+UVUV","Seance","Page generee en"];
+	this.symb = ["EDT.CRU","+","P=","H=","F","S=","//","$"];
 	this.showTokenize = sTokenize;
 	this.showParsedSymbols = sParsedSymb;
 	this.errorCount = 0;
@@ -14,7 +14,7 @@ var CruParser = function(sTokenize, sParsedSymb){
 // tokenize : transform the data input into a list
 // <eol> = CRLF
 CruParser.prototype.tokenize = function(data){
-	var separator = /(\r\n|\/{2}|\/\/)/;
+	var separator = /(\r\n|,P=|,H=| |:|-|,S=|,|\/\/)/;
 	data = data.split(separator);
 	data = data.filter((val, idx) => !val.match(separator));
 	return data;
@@ -26,7 +26,7 @@ CruParser.prototype.parse = function(data){
 	if(this.showTokenize){
 		console.log(tData);
 	}
-	this.cru(tData);
+	this.listcru(tData);
 }
 
 // Parser operand
@@ -78,29 +78,47 @@ CruParser.prototype.expect = function(s, input){
 
 // Parser rules
 
+CruParser.prototype.listcru = function(input){	
+	this.cru(input);
+	this.expect("Page", input);
+}
+
+
 // <cru> = *(<session>) "Page generee en" *
 CruParser.prototype.cru = function(input){
-	this.session(input);
-	this.expect("Page generee en", input);
-	if(input.length > 0){
-		this.cru(input);
+	if(this.check("+",input)){
+		this.expect("+",input);
+		var args = this.body(input);
+		var c = new POI(args.uv, args.type, args.place, args.jour, args.cara, args.salle);
+		this.expect("//",input);
+		this.parsedPOI.push(c);
+		if(input.length > 0){
+			this.cru(input);
+		}
 	}
+	else{
+		return false;
+	}
+}
+
+// <body> = <name> <eol> <latlng> <eol> <optional>
+CruParser.prototype.body = function(input){
+	var uv = this.session(input);
+	var ltlg = this.latlng(input);
+	return { uv: uv, lt: ltlg.lat, lg: ltlg.lng };
 }
 
 // <session> = "+UVUV" <seance> *(<seance>)
 CruParser.prototype.session = function(input){
-	this.expect("+UVUV", input);
-	this.seance(input);
-	var formatRegex = /[A-Z]{2,7}\d{0,2}[A-Z]?(?:A|T1|F|R)/
-	while(this.check("+", input)){
-		if(!formatRegex.text(input[0])){
-			this.errMsg("Invalid session format", input);
-		}else{
-		this.seance(input);
-		}
+	this.expect("+", input);
+	var curS = this.next(input);
+
+	if(matched = curS.match(/[A-Z]{2} + [0-9]{2}/)){
+		return matched[0];
+	}else{
+		this.errMsg("Invalid name", input);
 	}
 }
-
 //----------------//
 
 // <seance> = "Seance" <typecours> *(<typecours>) <personne> *(<personne>) <salle> *(<salle>) <horaire> *(<horaire>) 
@@ -128,7 +146,7 @@ CruParser.prototype.seance = function(input){
 	}
 	this.parsedSessions.push({ typecours: typecours, salle: salle, horaire: horaire });
 }
-
+/*
 // <salle> = "S=" <digit>
 CruParser.prototype.salle = function(input){
 	this.expect("S=", input);
@@ -178,6 +196,6 @@ CruParser.prototype.typecours = function(input){
 	
 }
 
-
+*/
 
 module.exports = CruParser;
