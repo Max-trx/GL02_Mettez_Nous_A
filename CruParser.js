@@ -103,14 +103,20 @@ CruParser.prototype.session = function(input){
 
 //----------------//
 
-// <seance> = "Seance" <salle> *(<salle>) <horaire> *(<horaire>) <typecours> *(<typecours>)
+// <seance> = "Seance" <typecours> *(<typecours>) <personne> *(<personne>) <salle> *(<salle>) <horaire> *(<horaire>) 
 CruParser.prototype.seance = function(input){
 	this.expect("Seance", input);
 	var salle = this.salle(input);
 	var horaire = this.horaire(input);
+	var typecours = this.typecours(input);
+	var personne = this.personne(input);
 	while(this.check("1,", input)){
 		this.next(input);
 		typecours = this.typecours(input);
+	}
+	while(this.check("P=", input)){
+		this.next(input);
+		personne = this.personne(input);
 	}
 	while(this.check("H=", input)){
 		this.next(input);
@@ -120,7 +126,7 @@ CruParser.prototype.seance = function(input){
 		this.next(input);
 		salle = this.salle(input);
 	}
-	this.parsedSessions.push({ salle: salle, horaire: horaire });
+	this.parsedSessions.push({ typecours: typecours, salle: salle, horaire: horaire });
 }
 
 // <salle> = "S=" <digit>
@@ -159,5 +165,19 @@ CruParser.prototype.typecours = function(input){
 	}
 	}
 }
+
+// <personne> = "P=" <personne>
+CruParser.prototype.typecours = function(input){
+	this.expect("P=", input);
+	var curS = this.next(input);
+	if(matched = curS.match(/d/)){
+		return matched[0];
+	}else{
+		this.errMsg("Invalid nb personne", input);
+	}
+	
+}
+
+
 
 module.exports = CruParser;
