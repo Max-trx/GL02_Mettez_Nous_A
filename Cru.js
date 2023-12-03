@@ -1,9 +1,9 @@
-var POI = function(uv, type, place, jour, cara, salle){
+var CRU = function(uv, type, place, horaire, cara, salle){
 
 	this.uv = uv;
     this.type = type;
     this.place = place;
-    this.jour = jour;
+    this.horaire = horaire;
     this.caracteristique = cara;
     this.salle = salle;
 }
