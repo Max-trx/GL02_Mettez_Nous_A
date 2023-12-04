@@ -3,6 +3,7 @@
 var CruParser = function(sTokenize, sParsedSymb){
 	this.parsedCRU = [];
 	this.symb = ["EDT.CRU","+","P=","H=","F","S=","//","$"];
+	this.showTokenize = sTokenize;
 	this.showParsedSymbols = sParsedSymb;
 	this.errorCount = 0;
 }
@@ -99,6 +100,9 @@ CruParser.prototype.seanceList = function(input) {
 CruParser.prototype.cru = function(input){
 	while (this.check("+", input)){
 		this.cours(input);
+		var args = this.cours(input);
+		var c = new CRU(args.ue, args.type, args.place, args.jour, args.horaire, args.frequency, args.salle);
+		this.parsedCRU.push(c);
 	}
 }
 
@@ -108,7 +112,8 @@ CruParser.prototype.cours = function(input){
 	this.expect("+", input);
 	var ue = this.ue(input);
 	this.next(input); // Ignore whitespace
-	this.seance(input);
+	var seance = this.seance(input);
+	return {ue: ue, type: seance.type, place: seance.place, jour: seance.caract.jour, horaire: seance.caract.horaire, frequency: seance.caract.frequency, salle: seance.caract.salle};
 }
 
 // <UE> = 2*7 ALPHA *2 DIGIT *1 ALPHA *1 Supplément
@@ -136,7 +141,7 @@ CruParser.prototype.seance = function(input){
 	this.expect("1,", input);
 	var type = this.type(input);
 	this.expect(",P=", input);
-	var duree = this.next(input);
+	var place = this.next(input);
 	this.expect(",H=", input);
 	var caract = this.caracteristique(input);
 	this.expect("/CRLF", input);
