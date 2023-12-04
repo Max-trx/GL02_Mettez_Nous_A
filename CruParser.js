@@ -1,7 +1,8 @@
 // CruParser
 
 var CruParser = function(sTokenize, sParsedSymb){
-	this.symb = ["+UVUV", "+SC00", "+SC00T1", "+SC04", "+SC06", "+SD11", "+SE01", "+SG11", "+SG12", "+SG21", "+SG22"];
+	this.parsedCRU = [];
+	this.symb = ["EDT.CRU","+","P=","H=","F","S=","//","$"];
 	this.showParsedSymbols = sParsedSymb;
 	this.errorCount = 0;
 }
@@ -11,7 +12,7 @@ var CruParser = function(sTokenize, sParsedSymb){
 // tokenize : transforme les données d'entrée en une liste
 // <eol> = CRLF
 CruParser.prototype.tokenize = function(data){
-	var separator = /(\r\n|: )/;
+	var separator = /(\r\n|,P=|,H=| |:|-|,S=|,|\/\/)/;
 	data = data.split(separator);
 	data = data.filter((val, idx) => !val.match(separator)); 					
 	return data;
@@ -71,12 +72,36 @@ CruParser.prototype.expect = function(s, input){
 
 // Parser rules
 
+/*
+// <Cours> = ‘+’ UE CRLF 1* Séance
+CruParser.prototype.cru = function(input){
+	this.expect("+", input);
+	var ue = this.ue(input);
+	this.next(input); // Ignore whitespace
+	var seances = this.seanceList(input); // Modify this line
+	this.parsedCRU.push({ ue: ue, seances: seances }); // Push the parsed course into parsedCRU
+}
+
+// Ajoutez une nouvelle méthode seanceList pour gérer la liste de séances
+CruParser.prototype.seanceList = function(input) {
+    var seances = [];
+    while (this.check("1,", input)) {
+        var seance = this.seance(input);
+        seances.push(seance);
+    }
+    return seances;
+}
+*/
+
+
+
 // <cru> = 1*Cours
 CruParser.prototype.cru = function(input){
 	while (this.check("+", input)){
 		this.cours(input);
 	}
 }
+
 
 // <Cours> = ‘+’ UE CRLF 1* Séance
 CruParser.prototype.cours = function(input){

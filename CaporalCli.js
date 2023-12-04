@@ -31,7 +31,7 @@ cli
 				logger.info("The .Cru file contains error".red);
 			}
 			
-			logger.debug(analyzer.parsedPOI);
+			logger.debug(analyzer.parsedCRU);
 		});
 	})
 
