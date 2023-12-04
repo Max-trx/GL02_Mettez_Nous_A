@@ -1,31 +1,26 @@
 // CruParser
 
 var CruParser = function(sTokenize, sParsedSymb){
-	// The list of sessions parsed from the input file.
-	this.parsedSessions = [];
-	this.symb = ["+UVUV","Seance","Page generee en"];
-	this.showTokenize = sTokenize;
+	this.parsedCRU = [];
+	this.symb = ["EDT.CRU","+","P=","H=","F","S=","//","$"];
 	this.showParsedSymbols = sParsedSymb;
 	this.errorCount = 0;
 }
 
 // Parser procedure
 
-// tokenize : transform the data input into a list
+// tokenize : transforme les données d'entrée en une liste
 // <eol> = CRLF
 CruParser.prototype.tokenize = function(data){
-	var separator = /(\r\n|\/{2}|\/\/)/;
+	var separator = /(\r\n|,P=|,H=| |:|-|,S=|,|\/\/)/;
 	data = data.split(separator);
-	data = data.filter((val, idx) => !val.match(separator));
+	data = data.filter((val, idx) => !val.match(separator)); 					
 	return data;
 }
 
-// parse : analyze data by calling the first non-terminal rule of the grammar
+// parse : analyse des données en appelant la première règle non terminale de la grammaire
 CruParser.prototype.parse = function(data){
 	var tData = this.tokenize(data);
-	if(this.showTokenize){
-		console.log(tData);
-	}
 	this.cru(tData);
 }
 
@@ -33,151 +28,197 @@ CruParser.prototype.parse = function(data){
 
 CruParser.prototype.errMsg = function(msg, input){
 	this.errorCount++;
-	console.log("Parsing Error ! on "+input+" -- msg : "+msg);
+	console.log("Parsing Error ! on " + input + " -- msg : " + msg);
 }
 
 // Read and return a symbol from input
 CruParser.prototype.next = function(input){
 	var curS = input.shift();
-	if(this.showParsedSymbols){
+	if (this.showParsedSymbols){
 		console.log(curS);
 	}
 	return curS;
 }
 
-// accept : verify if the arg s is part of the language symbols.
+// accept : vérifie si l'argument s fait partie des symboles du langage.
 CruParser.prototype.accept = function(s){
 	var idx = this.symb.indexOf(s);
 	// index 0 exists
-	if(idx === -1){
-		this.errMsg("symbol "+s+" unknown", [" "]);
+	if (idx === -1){
+		this.errMsg("symbol " + s + " unknown", [" "]);
 		return false;
 	}
 
 	return idx;
 }
 
-// check : check whether the arg elt is at the head of the list
+// check : vérifie si l'élément arg est en tête de la liste
 CruParser.prototype.check = function(s, input){
-	if(this.accept(input[0]) == this.accept(s)){
+	if (this.accept(input[0]) == this.accept(s)){
 		return true;	
 	}
 	return false;
 }
 
-// expect : expect the next symbol to be s.
+// expect : attend que le prochain symbole soit s.
 CruParser.prototype.expect = function(s, input){
-	if(s == this.next(input)){
-		//console.log("Recognized! "+s)
+	if (s == this.next(input)){
 		return true;
-	}else{
-		this.errMsg("symbol "+s+" doesn't match", input);
+	} else {
+		this.errMsg("symbol " + s + " doesn't match", input);
 	}
 	return false;
 }
 
 // Parser rules
 
-// <cru> = *(<session>) "Page generee en" *
+/*
+// <Cours> = ‘+’ UE CRLF 1* Séance
 CruParser.prototype.cru = function(input){
-	this.session(input);
-	this.expect("Page generee en", input);
-	if(input.length > 0){
-		this.cru(input);
+	this.expect("+", input);
+	var ue = this.ue(input);
+	this.next(input); // Ignore whitespace
+	var seances = this.seanceList(input); // Modify this line
+	this.parsedCRU.push({ ue: ue, seances: seances }); // Push the parsed course into parsedCRU
+}
+
+// Ajoutez une nouvelle méthode seanceList pour gérer la liste de séances
+CruParser.prototype.seanceList = function(input) {
+    var seances = [];
+    while (this.check("1,", input)) {
+        var seance = this.seance(input);
+        seances.push(seance);
+    }
+    return seances;
+}
+*/
+
+
+
+// <cru> = 1*Cours
+CruParser.prototype.cru = function(input){
+	while (this.check("+", input)){
+		this.cours(input);
 	}
 }
 
-// <session> = "+UVUV" <seance> *(<seance>)
-CruParser.prototype.session = function(input){
-	this.expect("+UVUV", input);
+
+// <Cours> = ‘+’ UE CRLF 1* Séance
+CruParser.prototype.cours = function(input){
+	this.expect("+", input);
+	var ue = this.ue(input);
+	this.next(input); // Ignore whitespace
 	this.seance(input);
-	var formatRegex = /[A-Z]{2,7}\d{0,2}[A-Z]?(?:A|T1|F|R)/
-	while(this.check("+", input)){
-		if(!formatRegex.text(input[0])){
-			this.errMsg("Invalid session format", input);
-		}else{
-		this.seance(input);
-		}
+}
+
+// <UE> = 2*7 ALPHA *2 DIGIT *1 ALPHA *1 Supplément
+CruParser.prototype.ue = function(input){
+	var ue = this.next(input);
+	if (matched = ue.match(/[A-Za-z]{2}\d{7}\d{2}[A-Za-z]\d{1}/)){
+		return matched[0];
+	} else {
+		this.errMsg("Invalid UE", [ue]);
 	}
 }
 
-//----------------//
+// <Supplément> = ‘A’/’T1’/’F’/’R’
+CruParser.prototype.supplement = function(input){
+	var supplement = this.next(input);
+	if (supplement.match(/A|T1|F|R/)){
+		return supplement;
+	} else {
+		this.errMsg("Invalid Supplement", [supplement]);
+	}
+}
 
-// <seance> = "Seance" <typecours> *(<typecours>) <personne> *(<personne>) <salle> *(<salle>) <horaire> *(<horaire>) 
+// <Séance> = ‘1,’ Type ‘,P=’ 1*3 DIGIT ‘,’ Caractéristique ‘/’ CRLF
 CruParser.prototype.seance = function(input){
-	this.expect("Seance", input);
-	var salle = this.salle(input);
-	var horaire = this.horaire(input);
-	var typecours = this.typecours(input);
-	var personne = this.personne(input);
-	while(this.check("1,", input)){
-		this.next(input);
-		typecours = this.typecours(input);
-	}
-	while(this.check("P=", input)){
-		this.next(input);
-		personne = this.personne(input);
-	}
-	while(this.check("H=", input)){
-		this.next(input);
-		horaire = this.horaire(input);
-	}
-	while(this.check("S=", input)){
-		this.next(input);
-		salle = this.salle(input);
-	}
-	this.parsedSessions.push({ typecours: typecours, salle: salle, horaire: horaire });
-}
-
-// <salle> = "S=" <digit>
-CruParser.prototype.salle = function(input){
-	this.expect("S=", input);
-	var curS = this.next(input);
-	if(matched = curS.match(/[A-Z]|d{3}|SPORT|EXT1|IUT1/)){
-		return matched[0];
-	}else{
-		this.errMsg("Invalid salle", input);
-	}
-}
-
-// <horaire> = "H=" <time>
-CruParser.prototype.horaire = function(input){
-	this.expect("H=", input);
-	var curS = this.next(input);
-	if(matched = curS.match(/(L|MA|ME|J|V) \d{1,2}:\d{2}-\d{1,2}:\d{2}/)){
-		return matched[0];
-	}else{
-		this.errMsg("Invalid horaire", input);
-	}
-}
-
-// <type de cours> = "1," <type>
-CruParser.prototype.typecours = function(input){
 	this.expect("1,", input);
-	var curS = this.next(input);
-	if(matched = curS.match(/(T|D|C)\d{1}/)){
-		return matched[0];
-	}else{
-		if (matched = curS.match(/F/)){
-		return nothing
-		}else{
-		this.errMsg("Invalid type cours", input);
-	}
+	var type = this.type(input);
+	this.expect(",P=", input);
+	var duree = this.next(input);
+	this.expect(",H=", input);
+	var caract = this.caracteristique(input);
+	this.expect("/CRLF", input);
+}
+
+// <Type> = (‘C’/’D’/’T’) (‘1’/’2’/’3’/’4’/’5’/’6’/’7’/’8’/’9’/’10’/’11’/’12’/’13’/’14’/’15’)
+CruParser.prototype.type = function(input){
+	var type = this.next(input);
+	if (type.match(/C|D|T[1-9]|T10|T11|T12|T13|T14|T15/)){
+		return type;
+	} else {
+		this.errMsg("Invalid Type", [type]);
 	}
 }
 
-// <personne> = "P=" <personne>
-CruParser.prototype.typecours = function(input){
-	this.expect("P=", input);
-	var curS = this.next(input);
-	if(matched = curS.match(/d/)){
-		return matched[0];
-	}else{
-		this.errMsg("Invalid nb personne", input);
-	}
-	
+// <Caractéristique> = ‘H=’ <Jour> WSP <Horaire> ‘,F=’ (‘ ‘/’1’/’2’/’A’/’B’) ‘,S=’ <Salle>
+CruParser.prototype.caracteristique = function(input){
+	this.expect("H=", input);
+	var jour = this.jour(input);
+	this.next(input); // Ignore whitespace
+	var horaire = this.horaire(input);
+	this.expect(",F=", input);
+	var frequency = this.next(input);
+	this.expect(",S=", input);
+	var salle = this.salle(input);
+
+	return { jour: jour, horaire: horaire, frequency: frequency, salle: salle };
 }
 
+// <Jour> = ‘L’/’MA’/’ME’/’J’/’V’/’S’
+CruParser.prototype.jour = function(input){
+	var jour = this.next(input);
+	if (jour.match(/L|MA|ME|J|V|S/)){
+		return jour;
+	} else {
+		this.errMsg("Invalid Jour", [jour]);
+	}
+}
 
+// <Horaire> = *1 Heure ‘:’ Minute ‘-‘ Heure ‘:’ Minute
+CruParser.prototype.horaire = function(input){
+	var hours = this.heure(input);
+	this.expect(":", input);
+	var minutes = this.minute(input);
+	this.expect("-", input);
+	var hoursEnd = this.heure(input);
+	this.expect(":", input);
+	var minutesEnd = this.minute(input);
 
+	return {
+		start: hours + ":" + minutes,
+		end: hoursEnd + ":" + minutesEnd
+	};
+}
+
+// <Heure> = 1*2 DIGIT
+CruParser.prototype.heure = function(input){
+	var hours = this.next(input);
+	if (hours && (matched = hours.match(/\d{1,2}/))){
+		return matched[0];
+	} else {
+		this.errMsg("Invalid Heure", [hours]);
+	}
+}
+
+// <Minute> = ‘00’/’30’
+CruParser.prototype.minute = function(input){
+	var minutes = this.next(input);
+	if (minutes.match(/00|30/)){
+		return minutes;
+	} else {
+		this.errMsg("Invalid Minute", [minutes]);
+	}
+}
+
+// <Salle> = *1 (1 ALPHA 3 DIGIT / ‘SPOR’/’EXT1’/’IUT1’)
+CruParser.prototype.salle = function(input) {
+    var salle = this.next(input);
+    if (salle && (matched = salle.match(/[A-Za-z]\d{3}|SPOR|EXT1|IUT1/))) {
+        return matched[0];
+    } else {
+        this.errMsg("Invalid Salle", [salle]);
+    }
+}
 module.exports = CruParser;
