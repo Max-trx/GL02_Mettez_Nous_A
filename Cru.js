@@ -8,3 +8,4 @@ var CRU = function(ue, type, place, jour, horaire, frequency, salle){
     this.salle = salle;
     this.frequency = frequency;
 }
+module.exports = CRU;
