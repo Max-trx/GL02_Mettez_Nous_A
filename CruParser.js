@@ -70,7 +70,6 @@ CruParser.prototype.check = function(s, input){
 CruParser.prototype.expect = function(s, input){
 	//console.log("input[0] au début d'expect"+input[0]);
 	if (s == input[0].charAt(0)){
-		//this.next(input);
 		return true;
 	} else {
 		this.errMsg("symbol " + s + " doesn't match", input);
@@ -147,7 +146,7 @@ CruParser.prototype.cours = function(input){
 CruParser.prototype.ue = function(input){
 	//console.log("input[0] au début de UE"+input[0]);
 	var ue = input[0];
-	if (matched = ue.match(/[+][A-Z]{2}[0-9]{2}/)){
+	if (matched = ue.match(/[+][A-Z]{1,7}[0-9]{0,3}/)){
 		//console.log("Nouvelle UE :"+matched[0]);
 		this.next(input);
 		return matched[0];
