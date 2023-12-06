@@ -35,4 +35,40 @@ cli
 		});
 	})
 
+
+	//Affichage du nombre de place par salle
+	.command('Capacite', 'Get the number of seats in a specified room')
+	.argument('<file>', 'The file to check with Cru parser')
+	.argument('<salle>','The room from which we want the info')
+	.action(({args, options, logger}) => {
+		fs.readFile(args.file, 'utf8', function (err,data) {
+			if (err) {
+				return logger.warn(err);
+			}
+
+			var analyzer = new CruParser(false, false);
+			analyzer.parse(data);
+
+			if(analyzer.errorCount ===0){
+
+				let salle = args.salle.toUpperCase();
+				let availableseats = 0;
+
+				analyzer.parsedCRU.forEach(cours => {
+					if (cours.salle === salle) {
+						availableseats = cours.place;
+					}
+				});
+
+				if (availableseats !== 0) {
+					logger.info('Number of available seats in salle ' + salle +' :' + availableseats);
+				}else{logger.info('No seats or no info')}
+			
+			}else {logger.info('Problem'.red)}
+		});
+	})
+
+
+
+
     cli.run(process.argv.slice(2));
