@@ -1,9 +1,11 @@
-var CRU = function(uv, type, place, horaire, cara, salle){
+var CRU = function(ue, type, place, jour, horaire, frequency, salle){
 
-	this.uv = uv;
+	this.ue = ue;
     this.type = type;
     this.place = place;
     this.horaire = horaire;
-    this.caracteristique = cara;
+    this.jour = jour;
     this.salle = salle;
+    this.frequency = frequency;
 }
+module.exports = CRU;
