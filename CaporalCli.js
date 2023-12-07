@@ -6,6 +6,8 @@ const FreeSlot = require('./Class/FreeSlot.js');
 const vg = require('vega');
 const vegalite = require('vega-lite');
 
+const {createICalendar} = require('node-ical');
+
 const cli = require("@caporal/core").default;
 
 cli
@@ -271,6 +273,68 @@ cli
 			};
 		});
 	})
+
+
+
+	//-----------------------------------------------------//
+	//   SPEC05      >> Command :  Exporter <<             //
+	//-----------------------------------------------------//
+
+	.commannd('exporter','Export course schedule to iCalendar file')
+	.action(({logger}) => {
+		logger.info("Entrez le nom de vos cours avec des espaces entre");
+		const readline = requipe('readline').createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
+
+		//C'est parti
+		readline.question('Noms des cours :', (cours) => {
+			const nomsDesCours = cours.split(' ');
+			const parseur = new CruParser(false, false);
+			const coursInconnus = nomsDesCours.filter(cours => parseur.salle([cours]));
+			if(coursInconnus.length > 0) {logger.error('Cours inconnu' + coursInconnus)
+		return;}
+			})
+			while(nomsDesCours.length>0){
+				if(parser.salle([nomDesCours])) {
+					readline.question('Le cours trouvé ' + nomCours + ' est-il correct ?', (reponse) =>{
+						const choixValide = reponse === 'oui';
+
+						//Choix des chéneaux
+						if(choixValide){
+							const creneauxPossibles = nomCours.seance
+							logger.info('Creneaux possibles pour ' + nomCours + ' : ' + creneauxPossibles.join(', '))
+							readline.question('Choisissez un créneaux parmi ceux proposés', (creneauxChoisi) => logger.info("Créneaux choisi pour " + nomCours + " : " + creneauxChoisi))
+
+
+
+							readline.close()
+						}else{logger.info("Veuillez entrer le nom correst du cours");}
+					});
+				}else{logger.error("Cours inconnu")}
+			}
+		
+		
+	
+		logger.question("c'est bon ??????????", (reponse) => {
+			if(reponse === 'oui') {
+				const calendar = createICalendar();
+				nomsDesCours.forEach((nomCours, index) => {
+					start: horaire.hours, horaire.minutes;
+					end: horaire.hoursEnd, horaire.minutesEnd;
+					summary: nomCours;
+					description: cours.type
+				});
+			
+			logger.info("Fichier Icalendar généré")
+			}else{logger.info("Coninuez alors d'ajouter des cours et des horaires")}
+		},
+		readline.close())
+
+	
+		})
+
 
 
 	// Nouvelle commande pour débugger
