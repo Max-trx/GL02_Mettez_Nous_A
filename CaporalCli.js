@@ -280,7 +280,7 @@ cli
 	//   SPEC05      >> Command :  Exporter <<             //
 	//-----------------------------------------------------//
 
-	.commannd('exporter','Export course schedule to iCalendar file')
+/*	.commannd('exporter','Export course schedule to iCalendar file')
 	.action(({logger}) => {
 		logger.info("Entrez le nom de vos cours avec des espaces entre");
 		const readline = requipe('readline').createInterface({
@@ -335,7 +335,7 @@ cli
 	
 		})
 
-
+*/
 
 	// Nouvelle commande pour débugger
 	.command('seeAll', 'Get rooms for a specific course')
@@ -369,5 +369,51 @@ cli
 
 
 
+
+
+	//-----------------------------------------------------//
+	//   SPEC07  >> Command : capacityRoomClassement  <<   //
+	//-----------------------------------------------------//
+
+	.command('capacityRoomClassement', 'Get & sort the number of seats in all rooms')
+	.argument('<file>','The file to check with the parseur')
+	.action(({args, options, logger}) => {
+		fs.readFile(args.file, 'utf8', function (err,data) {
+			if (err) {
+				return logger.warn(err.red);
+			}
+
+			var analyzer = new CruParser(false, false);
+			analyzer.parse(data);
+
+			if(analyzer.errorCount===0) {
+				let capacitees =new Map();
+				analyzer.parsedCRU.forEach(cours => {
+					let salle = cours.salle;
+					let availableSeats = cours.place;
+
+				if (!capacitees.has(salle)) {
+					capacitees.set(salle, availableSeats);
+				}else{
+					let currentCapacity = capacitees.get(salle);
+					if (availableSeats > currentCapacity) {
+						capacitees.set(salle, availableSeats);
+					}
+				}
+			});
+
+			//Tri des salles
+			const sortedCapacitees = new Map([...capacitees.entries()].sort((a,b)=>b[1]-a[1]));
+
+			logger.info('Classement des salles par capacité max');
+			sortedCapacitees.forEach((capacitee, salle) =>{
+				logger.info(`${salle}: ${capacitee}`);
+			});
+
+			}else{logger.info('PROBLEM'.red)}
+
+
+		});
+	})
 
     cli.run(process.argv.slice(2));
