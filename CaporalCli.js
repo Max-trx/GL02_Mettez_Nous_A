@@ -11,7 +11,12 @@ const cli = require("@caporal/core").default;
 cli
 	.version('cru-parser-cli')
 	.version('0.07')
-	// check Cru
+
+
+	//-----------------------------------------------------//
+	//              >> Command :  check <<                 //
+	//-----------------------------------------------------//
+
 	.command('check', 'Check if <file> is a valid Cru file')
 	.argument('<file>', 'The file to check with Cru parser')
 	.option('-s, --showSymbols', 'log the analyzed symbol at each step', { validator : cli.BOOLEAN, default: false })
@@ -33,6 +38,46 @@ cli
 			}
 			
 			logger.debug(analyzer.parsedCRU);
+		});
+	})
+
+
+	//-----------------------------------------------------//
+	//   SPEC01      >> Command :  GetRoom <<              //
+	//-----------------------------------------------------//
+
+	// Nouvelle commande pour obtenir les salles pour un cours spécifique
+	.command('GetRoom', 'Get rooms for a specific course')
+	.argument('<file>', 'The file to check with Cru parser')
+	.argument('<ue>', 'The course code for which you want to get rooms')
+	.action(({args, options, logger}) => {
+		fs.readFile(args.file, 'utf8', function (err, data) {
+			if (err) {
+				return logger.warn(err);
+			}
+
+			var analyzer = new CruParser(false, false);
+			analyzer.parse(data);
+
+			if (analyzer.errorCount === 0) {
+				let ueToSearch = args.ue.toUpperCase();
+				ueToSearch = "+" + ueToSearch;
+				let rooms = [];
+				analyzer.parsedCRU.forEach(cours => {
+					if (cours.ue === ueToSearch) {
+						rooms.push(cours.salle);
+					}
+				});
+
+				if (rooms.length > 0) {
+					logger.info('Rooms for course '+ ueToSearch+':'+ rooms);
+				} else {
+					logger.info('No information available for course '+ueToSearch);
+				}
+
+			} else {
+				logger.info('Problem'.red);
+			}
 		});
 	})
 
@@ -74,42 +119,6 @@ cli
 				}else{logger.info('No seats or no info')}
 			
 			}else {logger.info('Problem'.red)}
-		});
-	})
-
-
-	// Nouvelle commande pour obtenir les salles pour un cours spécifique
-	.command('GetRoom', 'Get rooms for a specific course')
-	.argument('<file>', 'The file to check with Cru parser')
-	.argument('<ue>', 'The course code for which you want to get rooms')
-	.action(({args, options, logger}) => {
-		fs.readFile(args.file, 'utf8', function (err, data) {
-			if (err) {
-				return logger.warn(err);
-			}
-
-			var analyzer = new CruParser(false, false);
-			analyzer.parse(data);
-
-			if (analyzer.errorCount === 0) {
-				let ueToSearch = args.ue.toUpperCase();
-				ueToSearch = "+" + ueToSearch;
-				let rooms = [];
-				analyzer.parsedCRU.forEach(cours => {
-					if (cours.ue === ueToSearch) {
-						rooms.push(cours.salle);
-					}
-				});
-
-				if (rooms.length > 0) {
-					logger.info('Rooms for course '+ ueToSearch+':'+ rooms);
-				} else {
-					logger.info('No information available for course '+ueToSearch);
-				}
-
-			} else {
-				logger.info('Problem'.red);
-			}
 		});
 	})
 
@@ -186,6 +195,80 @@ cli
 			} else {
 				logger.info('Problem'.red);
 			}
+		});
+	})
+
+
+
+	//-----------------------------------------------------//
+	//   SPEC04      >> Command :  FreeRoom <<             //
+	//-----------------------------------------------------//
+
+	//Voir quelles salles sont libres pour un créneau donné
+	.command('FreeRoom', 'Check which room is free for a given time')
+	.argument('<file>', 'The file to check with Cru parser')
+	.argument('<Jour>', 'The day of the given time')
+	.argument('<start>', 'Start time of the time slot (XX:XX)')
+	.argument('<end>', 'End time of the time slot (XX:XX)')
+	.action(({args, options, logger}) => {
+		//on cherche à vérifier le format d'une heure sous forme (XX:XX)
+		const isValidTimeFormat = (time) => {
+			const timeRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
+			return timeRegex.test(time);
+		};
+
+		// Vérification du format des arguments start et end
+		if (!isValidTimeFormat(args.start) || !isValidTimeFormat(args.end)) {
+			logger.error('Invalid time format. Please use the format XX:XX for start and end.');
+			return;
+		}
+
+		fs.readFile(args.file, 'utf8', function (err,data){
+			if (err) {
+				return logger.warn(err);
+			}
+
+			var analyzer = new CruParser(false, false);
+			analyzer.parse(data);
+
+			if(analyzer.errorCount === 0) {
+				let jour = args.jour.toUpperCase();
+				//usage de la fonction convertir en minutes pour faciliter
+				function convertirEnMinutes(heure) {
+					// Sépare les heures et les minutes
+					const [heures, minutes] = heure.split(':').map(Number);
+					const minutesTotales = heures * 60 + minutes;
+					return minutesTotales;
+				}
+				function getSallesDisponibles(parsedCRU, jour, start, end) {
+					const sallesOccupees = [];
+					const coursPourJour = analyzer.parsedCRU.filter(cours => cours.jour === jour);
+					//coursDisponibles regroupe tous les cours du jour en question qui ne chevauchent pas l'horaire
+					const coursDisponibles = coursPourJour.filter(cours => {
+						return !(convertirEnMinutes(cours.horaire.end) <= convertirEnMinutes(start) || convertirEnMinutes(cours.horaire.start) >= convertirEnMinutes(end));
+					});
+					//coursOccupe regroupe tous les cours du jour qui chevauchent le créneau horaire
+					const coursOccupe = coursPourJour.filter(cours => {
+						return convertirEnMinutes(cours.horaire.start) < convertirEnMinutes(end) && convertirEnMinutes(cours.horaire.end) > convertirEnMinutes(start);
+					});
+					//on ajoute les salles occupées à la liste
+					coursOccupe.forEach(cours => {
+						if (!sallesOccupees.includes(cours.salle)) {
+							sallesOccupees.push(cours.salle);
+						}
+					});
+					// on a la liste des salles disponibles en soustrayant les salles occupées de toutes les salles
+					const toutesLesSalles = analyzer.parsedCRU.map(cours => cours.salle);
+					const sallesDisponibles = toutesLesSalles.filter(salle => !sallesOccupees.includes(salle));
+
+					return sallesDisponibles;
+				}
+
+				const sallesDisponibles = getSallesDisponibles(analyzer.parsedCRU, jour, args.start, args.end);
+
+				logger.info(`Salles disponibles pour le jour ${jour} entre ${args.start} et ${args.end}:`);
+				logger.info(sallesDisponibles);
+			};
 		});
 	})
 
