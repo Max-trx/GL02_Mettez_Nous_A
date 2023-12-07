@@ -109,15 +109,13 @@ CruParser.prototype.cru = function(input){
 				var args2 = {
 					type: seance.type,
 					place: seance.place,
-					jour: seance.jour,
-					horaire: seance.horaire,
-					frequency: seance.frequency,
-					salle: seance.salle
+					jour: seance.caract.jour,
+					horaire: seance.caract.horaire,
+					frequency: seance.caract.frequency,
+					salle: seance.caract.salle
 				};
 				var c = new CRU(args.ue, args2.type, args2.place, args2.jour, args2.horaire, args2.frequency, args2.salle);
 				this.parsedCRU.push(c);
-				//console.log("input.length :"+input.length);
-				//console.log("input[0] :"+input[0]);
 			}
 			if(this.check("1",input)){
 				continuer = true;}
