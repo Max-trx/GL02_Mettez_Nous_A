@@ -416,4 +416,75 @@ cli
 		});
 	})
 
+
+
+	//-----------------------------------------------------//
+	//   SPEC06      >> Command : generateGraph  <<        //
+	//-----------------------------------------------------//
+
+	.command('generateGraph','Get rooms occupancy rates with a Vega-lite graph')
+	.argument('<file>','The file to check with Parseur')
+	.action(({args,options,logger}) => {
+		fs.readFile(args.file, 'utf8', function (err,data) {
+			if(err){
+				return logger.warn(err);
+			}
+
+			var analyzer = new CruParser(false,false);
+			analyzer.parse(data);
+
+			if(analyzer.errorCount===0){
+				let salleOccupations = new Map();
+
+				analyzer.parsedCRU.forEach(cours => {
+					let salle = cours.salle;
+					if (salleOccupations.has(salle)){
+						salleOccupations.set(salle, salleOccupations.get(salle)+1);
+					}else{ salleOccupations.set(salle,1);
+					}
+				});
+
+				//Calcul proportion
+
+				let occupationRates = {};
+				salleOccupations.forEach((count, salle) => {
+					occupationRates[salle] = (count / analyzer.parsedCRU.length) * 100;
+				});
+
+				//Youpi Vega
+
+				let dataPourVega = [];
+				Object.keys(occupationRates).forEach(salle => {
+					dataPourVega.push({salle, TauxOccupation: occupationRates[salle]});
+				});
+
+				const vegaLite = {
+					"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+					"description": "Taux d'occupation des salles",
+					"data":{"values":dataPourVega},
+					"mark": "bar",
+					"encoding":{
+						"x":{"field":"salle", "type": "nominal"},
+						"y":{"field":"TauxOccupation", "type":"quantitative"}
+					}
+				};
+
+				const chart = vegalite.compile(vegaLite).spec;
+
+				var runtime = vg.parse(chart);
+				var view = new vg.View(runtime).renderer('svg').run();
+				var mySvg = view.toSVG();
+				mySvg.then(function(res){
+					fs.writeFileSync("./result.svg", res)
+					view.finalize();
+					logger.info("%s", JSON.stringify(chart, null, 2));
+					logger.info("Chart output : ./result.svg");
+				})
+
+
+			}else{logger.info('PROBLEM'.red);}
+		});
+	});
+
+
     cli.run(process.argv.slice(2));
