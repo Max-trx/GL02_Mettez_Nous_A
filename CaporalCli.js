@@ -83,7 +83,7 @@ cli
 
 		// Vérification du format des arguments start et end
 		if (!isValidTimeFormat(args.start) || !isValidTimeFormat(args.end)) {
-			logger.error('Invalid time format. Please use the format XX:XX for start and end times.');
+			logger.error('Invalid time format. Please use the format XX:XX for start and end.');
 			return;
 		}
 
@@ -106,7 +106,7 @@ cli
 				}
 				function getSallesDisponibles(parsedCRU, jour, start, end) {
 					const sallesOccupees = [];
-					const coursPourJour = parsedCRU.filter(cours => cours.jour === jour);
+					const coursPourJour = analyzer.parsedCRU.filter(cours => cours.jour === jour);
 					//coursDisponibles regroupe tous les cours du jour en question qui ne chevauchent pas l'horaire
 					const coursDisponibles = coursPourJour.filter(cours => {
 						return !(convertirEnMinutes(cours.horaire.end) <= convertirEnMinutes(start) || convertirEnMinutes(cours.horaire.start) >= convertirEnMinutes(end));
@@ -122,7 +122,7 @@ cli
 						}
 					});
 					// on a la liste des salles disponibles en soustrayant les salles occupées de toutes les salles
-					const toutesLesSalles = parsedCRU.map(cours => cours.salle);
+					const toutesLesSalles = analyzer.parsedCRU.map(cours => cours.salle);
 					const sallesDisponibles = toutesLesSalles.filter(salle => !sallesOccupees.includes(salle));
 
 					return sallesDisponibles;
