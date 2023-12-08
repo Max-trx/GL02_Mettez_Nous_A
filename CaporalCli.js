@@ -6,7 +6,7 @@ const FreeSlot = require('./Class/FreeSlot.js');
 const vg = require('vega');
 const vegalite = require('vega-lite');
 
-const {createICalendar} = require('node-ical');
+const ical = require('ical-generator').default;
 
 const cli = require("@caporal/core").default;
 
@@ -19,24 +19,25 @@ cli
 	//              >> Command :  check <<                 //
 	//-----------------------------------------------------//
 
-	.command('check', 'Check if <file> is a valid Cru file')
-	.argument('<file>', 'The file to check with Cru parser')
-	.option('-s, --showSymbols', 'log the analyzed symbol at each step', { validator : cli.BOOLEAN, default: false })
-	.option('-t, --showTokenize', 'log the tokenization results', { validator: cli.BOOLEAN, default: false })
+	.command('check', 'Vérifiez si <file> est un fichier Cru valide')
+	.argument('<file>', 'Le fichier à vérifier avec le CruParser')
+	.option('-s, --showSymbols', 'afficher le symbole analysé à chaque étape', { validator : cli.BOOLEAN, default: false })
+	.option('-t, --showTokenize', 'afficher les résultats de la tokenisation', { validator: cli.BOOLEAN, default: false })
 	.action(({args, options, logger}) => {
 		
 		fs.readFile(args.file, 'utf8', function (err,data) {
 			if (err) {
 				return logger.warn(err);
 			}
-	  
+			
+			//Créer une var analyzer contenant les cours parser
 			var analyzer = new CruParser(options.showTokenize, options.showSymbols);
 			analyzer.parse(data);
 			
 			if(analyzer.errorCount === 0){
-				logger.info("The .Cru file is a valid Cru file".green);
+				logger.info("Le fichier .Cru est un fichier Cru valide".green);
 			}else{
-				logger.info("The .Cru file contains error".red);
+				logger.info("Le fichier .Cru contient une ou plusieurs erreur".red);
 			}
 			
 			logger.debug(analyzer.parsedCRU);
@@ -49,20 +50,22 @@ cli
 	//-----------------------------------------------------//
 
 	// Nouvelle commande pour obtenir les salles pour un cours spécifique
-	.command('GetRoom', 'Get rooms for a specific course')
-	.argument('<file>', 'The file to check with Cru parser')
-	.argument('<ue>', 'The course code for which you want to get rooms')
+	.command('getRoom', 'Affiche les salles pour un cours spécifique')
+	.argument('<file>', 'Le fichier à vérifier avec le CruParser')
+	.argument('<ue>', 'Le code du cours pour lequel vous souhaitez obtenir les salles')
 	.action(({args, options, logger}) => {
 		fs.readFile(args.file, 'utf8', function (err, data) {
 			if (err) {
 				return logger.warn(err);
 			}
 
+			//Créer une var analyzer contenant les cours parser
 			var analyzer = new CruParser(false, false);
 			analyzer.parse(data);
 
 			if (analyzer.errorCount === 0) {
 				let ueToSearch = args.ue.toUpperCase();
+				//On ajoute le + qui est au début de chaque cours dans les données parser
 				ueToSearch = "+" + ueToSearch;
 				let rooms = [];
 				analyzer.parsedCRU.forEach(cours => {
@@ -72,13 +75,13 @@ cli
 				});
 
 				if (rooms.length > 0) {
-					logger.info('Rooms for course '+ ueToSearch+':'+ rooms);
+					logger.info('Salles pour ce cours '+ ueToSearch+':'+ rooms);
 				} else {
-					logger.info('No information available for course '+ueToSearch);
+					logger.info('Pas d\'informations disponibles pour ce cours '+ueToSearch);
 				}
 
 			} else {
-				logger.info('Problem'.red);
+				logger.info('Probleme'.red);
 			}
 		});
 	})
@@ -89,15 +92,16 @@ cli
 	//-----------------------------------------------------//
 
 	//Affichage du nombre de place par salle
-	.command('capacityRoom', 'Get the number of seats in a specified room')
-	.argument('<file>', 'The file to check with Cru parser')
-	.argument('<salle>','The room from which we want the info')
+	.command('capacityRoom', 'Obtenez le nombre de sièges dans une salle spécifiée')
+	.argument('<file>', 'Le fichier à vérifier avec le CruParser')
+	.argument('<salle>','La salle dont vous voulez les informations')
 	.action(({args, options, logger}) => {
 		fs.readFile(args.file, 'utf8', function (err,data) {
 			if (err) {
 				return logger.warn(err);
 			}
 
+			//Créer une var analyzer contenant les cours parser
 			var analyzer = new CruParser(false, false);
 			analyzer.parse(data);
 
@@ -117,10 +121,10 @@ cli
 				});
 
 				if (maxAvailableSeats !== 0) {
-					logger.info('Number of available seats in salle ' + salle +' :' + maxAvailableSeats);
-				}else{logger.info('No seats or no info')}
+					logger.info('Nombre de places dans cette salle ' + salle +' :' + maxAvailableSeats);
+				}else{logger.info('Pas de places ou pas d\'infos')}
 			
-			}else {logger.info('Problem'.red)}
+			}else {logger.info('Probleme'.red)}
 		});
 	})
 
@@ -130,15 +134,16 @@ cli
 	//-----------------------------------------------------//
 
 	// Nouvelle commande pour obtenir les créneaux disponibles pour une salle spécifique
-	.command('AvailableSlots', 'Get available slots for a specific room')
-	.argument('<file>', 'The file to check with Cru parser')
-	.argument('<salle>', 'The room for which you want to get available slots')
+	.command('availableSlots', 'Obtenez des cr\éneaux disponibles pour une salle spécifique')
+	.argument('<file>', 'Le fichier à vérifier avec le CruParser')
+	.argument('<salle>', 'La salle dont vous souhaitez obtenir les cr\éneaux de libre')
 	.action(({args, options, logger}) => {
 		fs.readFile(args.file, 'utf8', function (err, data) {
 			if (err) {
 				return logger.warn(err);
 			}
 
+			//Créer une var analyzer contenant les cours parser
 			var analyzer = new CruParser(false, false);
 			analyzer.parse(data);
 
@@ -148,16 +153,19 @@ cli
 				let salleToSearch = args.salle.toUpperCase();
 				let availableSlots = [];
 
+				//On créé un tableau contenant tous les créneaux possible pour un cours
 				for (let hour = 8; hour <= 20; hour++) {
 					for (let minute of ['00', '30']) {
-						allSlots.push(`${hour}:${minute}`);
+						allSlots.push(hour+":"+minute);
 					}
 				};
 
 				analyzer.parsedCRU.forEach(cours => {
 					if (cours.salle === args.salle) {
-						var freeslot = FreeSlot.getInstance();
-						occupiedSlots.push(cours.horaire.start, cours.horaire.end);
+						var freeslot = FreeSlot.getInstance();	
+						//On enlève le créneau de début et de fin
+						occupiedSlots.push(cours.horaire.start,cours.horaire.end);	
+						//On enlève tous les créneaux entre l'heure de début et l'heure de fin 				
 						if ((cours.horaire.end.substr(0,2) - cours.horaire.start.substr(0,2)) === 2 | (cours.horaire.end.substr(0,2) - cours.horaire.start.substr(0,1)) === 2){
 							freeslot.getMiddleTime2Hours(cours,occupiedSlots);
 						}
@@ -185,17 +193,18 @@ cli
 					}
 				});
 
+				//On affiche le résultat en filtrant tous les créneaux par ceux non disponible
 				availableSlots = allSlots.filter(slot => !occupiedSlots.includes(slot));
 
 				if (availableSlots.length > 0) {
-					logger.info('Available slots for room '+salleToSearch+':'+ availableSlots.join(', '));
+					logger.info('Cr\éneaux libres pour cette salle '+salleToSearch+':'+ availableSlots.join(', '));
 					
 				} else {
-					logger.info('No available slots for room '+salleToSearch);
+					logger.info('Pas de cr\éneaux disponible pour cette salle '+salleToSearch);
 				}
 
 			} else {
-				logger.info('Problem'.red);
+				logger.info('Probleme'.red);
 			}
 		});
 	})
@@ -207,11 +216,11 @@ cli
 	//-----------------------------------------------------//
 
 	//Voir quelles salles sont libres pour un créneau donné
-	.command('FreeRoom', 'Check which room is free for a given time')
-	.argument('<file>', 'The file to check with Cru parser')
-	.argument('<Jour>', 'The day of the given time')
-	.argument('<start>', 'Start time of the time slot (XX:XX)')
-	.argument('<end>', 'End time of the time slot (XX:XX)')
+	.command('freeRoom', 'V\érifier quelle salle est libre pour un cr\éneau donné')
+	.argument('<file>', 'Le fichier à vérifier avec le CruParser')
+	.argument('<Jour>', 'Le jour du cr\éneau souhait\é')
+	.argument('<start>', 'Heure de d\ébut du cr\éneau (XX:XX)')
+	.argument('<end>', 'Heure de fin du cr\éneau (XX:XX)')
 	.action(({args, options, logger}) => {
 		//on cherche à vérifier le format d'une heure sous forme (XX:XX)
 		const isValidTimeFormat = (time) => {
@@ -221,7 +230,7 @@ cli
 
 		// Vérification du format des arguments start et end
 		if (!isValidTimeFormat(args.start) || !isValidTimeFormat(args.end)) {
-			logger.error('Invalid time format. Please use the format XX:XX for start and end.');
+			logger.error('Format d\'heure invalide. Veuillez utiliser le format XX:XX pour le début et la fin.');
 			return;
 		}
 
@@ -230,6 +239,7 @@ cli
 				return logger.warn(err);
 			}
 
+			//Créer une var analyzer contenant les cours parser
 			var analyzer = new CruParser(false, false);
 			analyzer.parse(data);
 
@@ -268,7 +278,7 @@ cli
 
 				const sallesDisponibles = getSallesDisponibles(analyzer.parsedCRU, jour, args.start, args.end);
 
-				logger.info(`Salles disponibles pour le jour ${jour} entre ${args.start} et ${args.end}:`);
+				logger.info("Salles disponibles pour le jour "+jour+" entre "+args.start+" et "+args.end);
 				logger.info(sallesDisponibles);
 			};
 		});
@@ -277,97 +287,152 @@ cli
 
 
 	//-----------------------------------------------------//
-	//   SPEC05      >> Command :  Exporter <<             //
+	//   SPEC05      >> Command :  Exporter ICal <<        //
 	//-----------------------------------------------------//
 
-/*	.commannd('exporter','Export course schedule to iCalendar file')
-	.action(({logger}) => {
-		logger.info("Entrez le nom de vos cours avec des espaces entre");
-		const readline = requipe('readline').createInterface({
-			input: process.stdin,
-			output: process.stdout,
-		});
 
-		//C'est parti
-		readline.question('Noms des cours :', (cours) => {
-			const nomsDesCours = cours.split(' ');
-			const parseur = new CruParser(false, false);
-			const coursInconnus = nomsDesCours.filter(cours => parseur.salle([cours]));
-			if(coursInconnus.length > 0) {logger.error('Cours inconnu' + coursInconnus)
-		return;}
-			})
-			while(nomsDesCours.length>0){
-				if(parser.salle([nomDesCours])) {
-					readline.question('Le cours trouvé ' + nomCours + ' est-il correct ?', (reponse) =>{
-						const choixValide = reponse === 'oui';
-
-						//Choix des chéneaux
-						if(choixValide){
-							const creneauxPossibles = nomCours.seance
-							logger.info('Creneaux possibles pour ' + nomCours + ' : ' + creneauxPossibles.join(', '))
-							readline.question('Choisissez un créneaux parmi ceux proposés', (creneauxChoisi) => logger.info("Créneaux choisi pour " + nomCours + " : " + creneauxChoisi))
-
-
-
-							readline.close()
-						}else{logger.info("Veuillez entrer le nom correst du cours");}
-					});
-				}else{logger.error("Cours inconnu")}
-			}
-		
-		
-	
-		logger.question("c'est bon ??????????", (reponse) => {
-			if(reponse === 'oui') {
-				const calendar = createICalendar();
-				nomsDesCours.forEach((nomCours, index) => {
-					start: horaire.hours, horaire.minutes;
-					end: horaire.hoursEnd, horaire.minutesEnd;
-					summary: nomCours;
-					description: cours.type
-				});
-			
-			logger.info("Fichier Icalendar généré")
-			}else{logger.info("Coninuez alors d'ajouter des cours et des horaires")}
-		},
-		readline.close())
-
-	
-		})
-
-*/
-
-	// Nouvelle commande pour débugger
-	.command('seeAll', 'Get rooms for a specific course')
-	.argument('<file>', 'The file to check with Cru parser')
-	.action(({args, options, logger}) => {
-		fs.readFile(args.file, 'utf8', function (err, data) {
-			if (err) {
+	.command('exportICal', 'Exporter les cours vers un fichier iCalendar (.ics)')
+	.argument('<file>', 'Chemin vers le fichier de cours.')
+	.action(({ args, logger }) => {
+		fs.readFile(args.file, 'utf8', function (err,data) {
+			if(err){
 				return logger.warn(err);
 			}
+			// Créer un nouvel objet iCalendar
+			const cal = ical();
 
+			// Ajouter chaque cours à l'objet iCalendar
+
+			//Créer une var analyzer contenant les cours parser
 			var analyzer = new CruParser(false, false);
 			analyzer.parse(data);
 
-			if (analyzer.errorCount === 0) {
-				analyzer.parsedCRU.forEach(cours => {
-					logger.info("-------------------------------------------");
-					logger.info("Nom ue :"+cours.ue);
-					logger.info("Nom type :"+cours.type);
-					logger.info("Nom place :"+cours.place);
-					logger.info("Nom salle :"+cours.salle);
-					logger.info("Nom jour :"+cours.jour);
-					logger.info("Nom horaire :"+cours.horaire);
-					logger.info("Nom frequency :"+cours.frequency);
-				});
+			//Selon le jour du cours on affecte la date
+			analyzer.parsedCRU.forEach(cours => {
+				if (cours.jour === "L"){
+					cal.createEvent({					
+						start: new Date(["2023-12-11", cours.horaire.start]),
+						end: new Date(["2023-12-11", cours.horaire.end]),
+						summary: cours.nom,
+						description: cours.description,
+						location: cours.salle
+					})
+				}
+				if (cours.jour === "MA"){
+					cal.createEvent({					
+						start: new Date(["2023-12-12", cours.horaire.start]),
+						end: new Date(["2023-12-12", cours.horaire.end]),
+						summary: cours.nom,
+						description: cours.description,
+						location: cours.salle
+					})
+				}
+				if (cours.jour === "MA"){
+					cal.createEvent({					
+						start: new Date(["2023-12-13", cours.horaire.start]),
+						end: new Date(["2023-12-13", cours.horaire.end]),
+						summary: cours.nom,
+						description: cours.description,
+						location: cours.salle
+					})
+				}
+				if (cours.jour === "J"){
+					cal.createEvent({					
+						start: new Date(["2023-12-14", cours.horaire.start]),
+						end: new Date(["2023-12-14", cours.horaire.end]),
+						summary: cours.nom,
+						description: cours.description,
+						location: cours.salle
+					})
+				}
+				if (cours.jour === "V"){
+					cal.createEvent({					
+						start: new Date(["2023-12-15", cours.horaire.start]),
+						end: new Date(["2023-12-15", cours.horaire.end]),
+						summary: cours.nom,
+						description: cours.description,
+						location: cours.salle
+					})
+				}
+			});
 
-			} else {
-				logger.info('Problem'.red);
-			}
-		});
+			// Sauvegarder l'objet iCalendar dans un fichier
+			const iCalendarString = cal.toString();
+			fs.writeFileSync("./EDT.ics", iCalendarString);
+
+			logger.info(`Cours exportés dans ${args.file}`);
+		})
 	})
 
 
+	
+	//-----------------------------------------------------//
+	//   SPEC06      >> Command : generateGraph  <<        //
+	//-----------------------------------------------------//
+
+	.command('generateGraph','Obtenez les taux d\'occupation des salles avec un graphique Vega-lite')
+	.argument('<file>','Le fichier à vérifier avec le CruParser')
+	.action(({args,options,logger}) => {
+		fs.readFile(args.file, 'utf8', function (err,data) {
+			if(err){
+				return logger.warn(err);
+			}
+
+			//Créer une var analyzer contenant les cours parser
+			var analyzer = new CruParser(false,false);
+			analyzer.parse(data);
+
+			if(analyzer.errorCount===0){
+				let salleOccupations = new Map();
+
+				analyzer.parsedCRU.forEach(cours => {
+					let salle = cours.salle;
+					if (salleOccupations.has(salle)){
+						salleOccupations.set(salle, salleOccupations.get(salle)+1);
+					}else{ salleOccupations.set(salle,1);
+					}
+				});
+
+				//Calcul proportion
+
+				let occupationRates = {};
+				salleOccupations.forEach((count, salle) => {
+					occupationRates[salle] = (count / analyzer.parsedCRU.length) * 100;
+				});
+
+				//Code Vega
+				let dataPourVega = [];
+				Object.keys(occupationRates).forEach(salle => {
+					dataPourVega.push({salle, TauxOccupation: occupationRates[salle]});
+				});
+
+				const vegaLite = {
+					"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+					"description": "Taux d'occupation des salles",
+					"data":{"values":dataPourVega},
+					"mark": "bar",
+					"encoding":{
+						"x":{"field":"salle", "type": "nominal"},
+						"y":{"field":"TauxOccupation", "type":"quantitative"}
+					}
+				};
+
+				const chart = vegalite.compile(vegaLite).spec;
+
+				var runtime = vg.parse(chart);
+				var view = new vg.View(runtime).renderer('svg').run();
+				var mySvg = view.toSVG();
+				mySvg.then(function(res){
+					fs.writeFileSync("./result.svg", res)
+					view.finalize();
+					logger.info("%s", JSON.stringify(chart, null, 2));
+					logger.info("Chart output : ./result.svg");
+				})
+
+
+			}else{logger.info('PROBLEM'.red);}
+		});
+	})
 
 
 
@@ -375,14 +440,15 @@ cli
 	//   SPEC07  >> Command : capacityRoomClassement  <<   //
 	//-----------------------------------------------------//
 
-	.command('capacityRoomClassement', 'Get & sort the number of seats in all rooms')
-	.argument('<file>','The file to check with the parseur')
+	.command('capaRoomClassement', 'Obtenez et triez le nombre de places dans toutes les salles')
+	.argument('<file>','Le fichier à vérifier avec le CruParser')
 	.action(({args, options, logger}) => {
 		fs.readFile(args.file, 'utf8', function (err,data) {
 			if (err) {
 				return logger.warn(err.red);
 			}
 
+			//Créer une var analyzer contenant les cours parser
 			var analyzer = new CruParser(false, false);
 			analyzer.parse(data);
 
@@ -419,72 +485,37 @@ cli
 
 
 	//-----------------------------------------------------//
-	//   SPEC06      >> Command : generateGraph  <<        //
+	//   UNTRACKED     >> Command : seeAll  <<			   //
 	//-----------------------------------------------------//
 
-	.command('generateGraph','Get rooms occupancy rates with a Vega-lite graph')
-	.argument('<file>','The file to check with Parseur')
-	.action(({args,options,logger}) => {
-		fs.readFile(args.file, 'utf8', function (err,data) {
-			if(err){
+	.command('seeAll', 'Voir l\'entièreté des cours parser pour voir si une erreur s\'y cache')
+	.argument('<file>', 'Le fichier à vérifier avec le CruParser')
+	.action(({args, options, logger}) => {
+		fs.readFile(args.file, 'utf8', function (err, data) {
+			if (err) {
 				return logger.warn(err);
 			}
 
-			var analyzer = new CruParser(false,false);
+			//Créer une var analyzer contenant les cours parser
+			var analyzer = new CruParser(false, false);
 			analyzer.parse(data);
 
-			if(analyzer.errorCount===0){
-				let salleOccupations = new Map();
-
+			if (analyzer.errorCount === 0) {
 				analyzer.parsedCRU.forEach(cours => {
-					let salle = cours.salle;
-					if (salleOccupations.has(salle)){
-						salleOccupations.set(salle, salleOccupations.get(salle)+1);
-					}else{ salleOccupations.set(salle,1);
-					}
+					logger.info("-------------------------------------------");
+					logger.info("Nom ue :"+cours.ue);
+					logger.info("Nom type :"+cours.type);
+					logger.info("Nom place :"+cours.place);
+					logger.info("Nom salle :"+cours.salle);
+					logger.info("Nom jour :"+cours.jour);
+					logger.info("Nom horaire :"+cours.horaire);
+					logger.info("Nom frequency :"+cours.frequency);
 				});
 
-				//Calcul proportion
-
-				let occupationRates = {};
-				salleOccupations.forEach((count, salle) => {
-					occupationRates[salle] = (count / analyzer.parsedCRU.length) * 100;
-				});
-
-				//Youpi Vega
-
-				let dataPourVega = [];
-				Object.keys(occupationRates).forEach(salle => {
-					dataPourVega.push({salle, TauxOccupation: occupationRates[salle]});
-				});
-
-				const vegaLite = {
-					"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-					"description": "Taux d'occupation des salles",
-					"data":{"values":dataPourVega},
-					"mark": "bar",
-					"encoding":{
-						"x":{"field":"salle", "type": "nominal"},
-						"y":{"field":"TauxOccupation", "type":"quantitative"}
-					}
-				};
-
-				const chart = vegalite.compile(vegaLite).spec;
-
-				var runtime = vg.parse(chart);
-				var view = new vg.View(runtime).renderer('svg').run();
-				var mySvg = view.toSVG();
-				mySvg.then(function(res){
-					fs.writeFileSync("./result.svg", res)
-					view.finalize();
-					logger.info("%s", JSON.stringify(chart, null, 2));
-					logger.info("Chart output : ./result.svg");
-				})
-
-
-			}else{logger.info('PROBLEM'.red);}
+			} else {
+				logger.info('Problem'.red);
+			}
 		});
-	});
-
+	})
 
     cli.run(process.argv.slice(2));
