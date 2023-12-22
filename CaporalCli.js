@@ -270,8 +270,10 @@ cli
 						}
 					});
 					// on a la liste des salles disponibles en soustrayant les salles occupées de toutes les salles
-					const toutesLesSalles = analyzer.parsedCRU.map(cours => cours.salle);
+					const toutesLesSalles = [...new Set(analyzer.parsedCRU.map(cours => cours.salle))];
 					const sallesDisponibles = toutesLesSalles.filter(salle => !sallesOccupees.includes(salle));
+
+
 
 					return sallesDisponibles;
 				}
