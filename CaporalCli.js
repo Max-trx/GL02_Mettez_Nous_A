@@ -154,6 +154,18 @@ cli
 				let availableSlots = [];
 				let jours =[];
 
+				//verifier si la salle existe
+				let salleExist = false;
+				analyzer.parsedCRU.forEach(cours => {
+					if (cours.salle === salleToSearch) {
+						salleExist = true;
+					}
+				});
+				if (!salleExist) {
+					logger.info('Cette salle n\'existe pas');
+					return;
+				}
+
 				//On créé un tableau contenant tous les créneaux possible pour un cours
 				for (let hour = 8; hour <= 20; hour++) {
 					for (let minute of ['00', '30']) {
