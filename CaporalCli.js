@@ -152,6 +152,7 @@ cli
 				let allSlots = [];
 				let salleToSearch = args.salle.toUpperCase();
 				let availableSlots = [];
+				let jours =[];
 
 				//On créé un tableau contenant tous les créneaux possible pour un cours
 				for (let hour = 8; hour <= 20; hour++) {
@@ -162,10 +163,10 @@ cli
 
 				analyzer.parsedCRU.forEach(cours => {
 					if (cours.salle === args.salle) {
-						var freeslot = FreeSlot.getInstance();	
+						var freeslot = FreeSlot.getInstance();
 						//On enlève le créneau de début et de fin
-						occupiedSlots.push(cours.horaire.start,cours.horaire.end);	
-						//On enlève tous les créneaux entre l'heure de début et l'heure de fin 				
+						occupiedSlots.push(cours.horaire.start,cours.horaire.end);
+						//On enlève tous les créneaux entre l'heure de début et l'heure de fin
 						if ((cours.horaire.end.substr(0,2) - cours.horaire.start.substr(0,2)) === 2 | (cours.horaire.end.substr(0,2) - cours.horaire.start.substr(0,1)) === 2){
 							freeslot.getMiddleTime2Hours(cours,occupiedSlots);
 						}
@@ -190,15 +191,24 @@ cli
 						if ((cours.horaire.end.substr(0,2) - cours.horaire.start.substr(0,1)) === 1 && cours.horaire.end.substr(3,5) != cours.horaire.start.substr(3,5) ){
 							freeslot.getMiddleTime1HoursHalf(cours,occupiedSlots);
 						}
+						jours.push(cours.jour);
 					}
+
 				});
 
 				//On affiche le résultat en filtrant tous les créneaux par ceux non disponible
 				availableSlots = allSlots.filter(slot => !occupiedSlots.includes(slot));
 
 				if (availableSlots.length > 0) {
-					logger.info('Cr\éneaux libres pour cette salle '+salleToSearch+':'+ availableSlots.join(', '));
-					
+
+					//parcourrire la liste et afficher les créneaux disponibles avec le jour
+					logger.info('Cr\éneaux disponibles pour cette salle '+salleToSearch);
+					let i = 0;
+					availableSlots.forEach(slot => {
+						logger.info(jours[i]+' : '+slot);
+						i++;
+					});
+
 				} else {
 					logger.info('Pas de cr\éneaux disponible pour cette salle '+salleToSearch);
 				}

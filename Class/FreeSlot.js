@@ -10,6 +10,8 @@ class FreeSlot{
 		return this.freeslot;
 	}
 
+
+
     getMiddleTime2Hours(cours,occupiedSlots){
         if (cours.horaire.start.substr(0,1) === "8"){
             occupiedSlots.push("8:30","9:00","9:30");
