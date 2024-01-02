@@ -250,6 +250,11 @@ cli
 			return timeRegex.test(time);
 		};
 
+		if (args.jour.toUpperCase() !== "L" && args.jour.toUpperCase() !== "MA" && args.jour.toUpperCase() !== "ME" && args.jour.toUpperCase() !== "J" && args.jour.toUpperCase() !== "V" && args.jour.toUpperCase() !== "S") {
+			logger.error('Jour invalide. Veuillez utiliser L, MA, ME, J, V ou S.');
+			return;
+		}
+
 		// Vérification du format des arguments start et end
 		if (!isValidTimeFormat(args.start) || !isValidTimeFormat(args.end)) {
 			logger.error('Format d\'heure invalide. Veuillez utiliser le format XX:XX pour le début et la fin.');
